@@ -202,3 +202,37 @@ if err != nil {
 	responseByte, _ := json.Marshal(response)
 	return string(responseByte)
 }
+
+// ! get notifications
+notificationsData, err, response := GetListObject(
+	urlConst,
+	"notifications",
+	appId,
+	Request{
+		Data: map[string]interface{}{
+			"client_id":    medicineTakeData.Data.Data.Response[0]["cleints_id"],
+			"preparati_id": medicineTaking["preparati_id"].(string),
+		},
+	},
+)
+if err != nil {
+	responseByte, _ := json.Marshal(response)
+	return string(responseByte)
+}
+
+var notification_guid []string
+
+for _, notification := range notificationsData.Data.Data.Response {
+	notification_guid = append(notification_guid, cast.ToString(notification["guid"]))
+}
+var m = map[string]interface{}{
+	"ids": notification_guid,
+}
+
+_, err = DoRequest(urlConst+"/v1/object/notifications", "DELETE", m, appId)
+if err != nil {
+	response.Data = map[string]interface{}{"message": "Error while deleting many object"}
+	response.Status = "error"
+	responseByte, _ := json.Marshal(response)
+	return string(responseByte)
+}
