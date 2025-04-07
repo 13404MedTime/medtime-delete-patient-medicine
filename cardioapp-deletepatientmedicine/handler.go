@@ -82,3 +82,41 @@ type RequestMany2Many struct {
 	TableFrom string   `json:"table_from"`
 	TableTo   string   `json:"table_to"`
 }
+
+func DoRequest(url string, method string, body interface{}, appId string) ([]byte, error) {
+	data, err := json.Marshal(&body)
+	if err != nil {
+		return nil, err
+	}
+	client := &http.Client{
+		Timeout: time.Duration(5 * time.Second),
+	}
+
+	request, err := http.NewRequest(method, url, bytes.NewBuffer(data))
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Add("authorization", "API-KEY")
+	request.Header.Add("X-API-KEY", appId)
+
+	resp, err := client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respByte, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return respByte, nil
+}
+
+func Send(text string) {
+	bot, _ := tgbotapi.NewBotAPI("7090962267:AAFR8hJWgTvYS27nVcurE9uLoVzURWxWEZk")
+
+	msg := tgbotapi.NewMessage(162256495, text)
+
+	bot.Send(msg)
+}
