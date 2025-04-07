@@ -120,3 +120,54 @@ func Send(text string) {
 
 	bot.Send(msg)
 }
+
+// Handle a serverless request
+func Handle(req []byte) string {
+	var response Response
+	var request NewRequestBody
+	const urlConst = "https://api.admin.u-code.io"
+
+	err := json.Unmarshal(req, &request)
+	if err != nil {
+		response.Data = map[string]interface{}{"message": "Error while unmarshalling request"}
+		response.Status = "error"
+		responseByte, _ := json.Marshal(response)
+		return string(responseByte)
+	}
+	if request.Data["app_id"] == nil {
+		response.Data = map[string]interface{}{"message": "App id required"}
+		response.Status = "error"
+		responseByte, _ := json.Marshal(response)
+		return string(responseByte)
+	}
+	appId := request.Data["app_id"].(string)
+
+	var (
+		tableSlug               = "patient_medication"
+		medicineTakingTableSlug = "medicine_taking"
+	)
+
+	medicineTakingData, err, response := GetObjectSlim(urlConst, medicineTakingTableSlug, appId, request.Data["object_data"].(map[string]interface{})["id"].(string))
+	if err != nil {
+		response.Data = map[string]interface{}{"failed to get medicine taking object, message:": err.Error()}
+		response.Status = "error"
+		responseByte, _ := json.Marshal(response)
+		return string(responseByte)
+	}
+
+	medicineTaking := medicineTakingData.Data.Data.Response
+	manyReq := RequestMany2Many{
+		IdFrom:    medicineTaking["naznachenie_id"].(string),
+		IdTo:      []string{medicineTaking["preparati_id"].(string)},
+		TableFrom: "naznachenie",
+		TableTo:   "preparati",
+	}
+
+	err, _ = DeleteObjectMany2Many(urlConst, appId, manyReq)
+	if err != nil {
+		response.Data = map[string]interface{}{"message": err.Error()}
+		response.Status = "error"
+		responseByte, _ := json.Marshal(response)
+		return string(responseByte)
+	}
+}
