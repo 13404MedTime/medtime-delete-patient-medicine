@@ -171,3 +171,34 @@ func Handle(req []byte) string {
 		return string(responseByte)
 	}
 }
+
+//get list objects response example
+getListObjectRequest := Request{
+	Data: map[string]interface{}{
+		"medicine_taking_id": request.Data["object_data"].(map[string]interface{})["id"].(string),
+	},
+}
+
+medicineTakeData, err, response := GetListObject(urlConst, tableSlug, appId, getListObjectRequest)
+if err != nil {
+	responseByte, _ := json.Marshal(response)
+	return string(responseByte)
+}
+
+var patientMedicationIds []string
+
+for _, medicineData := range medicineTakeData.Data.Data.Response {
+	patientMedicationIds = append(patientMedicationIds, cast.ToString(medicineData["guid"]))
+}
+
+var req_data = map[string]interface{}{
+	"ids": patientMedicationIds,
+}
+
+_, err = DoRequest(urlConst+"/v1/object/patient_medication", "DELETE", req_data, appId)
+if err != nil {
+	response.Data = map[string]interface{}{"message": "Error while deleting many object"}
+	response.Status = "error"
+	responseByte, _ := json.Marshal(response)
+	return string(responseByte)
+}
